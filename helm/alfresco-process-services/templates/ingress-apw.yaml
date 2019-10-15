@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ template "aps.fullname" . }}-apw
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    {{- if .Values.ingress.hostName }}
+    - host: {{ tpl .Values.ingress.hostName $ }}
+      http:
+    {{- else }}
+    - http:
+    {{- end }}
+        paths:
+        - path: {{ .Values.processWorkspace.ingress.path }}
+          backend:
+            serviceName: {{ template "aps.fullname" . }}-apw
+            servicePort: {{ .Values.processWorkspace.service.externalPort }}

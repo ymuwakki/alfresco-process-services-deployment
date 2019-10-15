@@ -1,0 +1,48 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "aps.fullname" . }}-admin
+  labels:
+    app: {{ template "aps.fullname" . }}-admin
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: admin
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config-admin.yaml") . | sha256sum }}
+      labels:
+        app: {{ template "aps.fullname" . }}-admin
+        release: {{ .Release.Name }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.registryPullSecrets }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.adminApp.image.repository }}:{{ .Values.adminApp.image.tag }}"
+          imagePullPolicy: {{ .Values.adminApp.image.pullPolicy }}
+          env:
+            - name: ACTIVITI_ADMIN_DATASOURCE_USERNAME
+              value: "{{ .Values.postgresql.postgresUser }}"
+            - name: ACTIVITI_ADMIN_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgresql-aps
+                  key: postgres-password
+            - name: ACTIVITI_ADMIN_DATASOURCE_URL
+              value: "jdbc:postgresql://{{ .Release.Name }}-postgresql-aps/{{ .Values.postgresql.postgresDatabase }}?characterEncoding=UTF-8"
+          envFrom:
+          - configMapRef:
+              # config map to use, defined in config-repository.yaml
+              name: {{ template "aps.fullname" . }}-admin-configmap
+          ports:
+            - containerPort: {{ .Values.adminApp.image.internalPort }}
+          resources:
+{{ toYaml .Values.adminApp.resources | indent 12 }}
+    {{- if .Values.adminApp.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.adminApp.nodeSelector | indent 8 }}
+    {{- end }}

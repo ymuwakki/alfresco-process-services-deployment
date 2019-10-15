@@ -1,0 +1,10 @@
+
+dependencies:
+  - name: postgresql
+    version: 0.9.3
+    repository: https://kubernetes-charts.storage.googleapis.com/
+    condition: alfresco-process-services.postgresql.enabled
+  - name: alfresco-infrastructure
+    version: 2.0.0-SNAPSHOT
+    condition: alfresco-process-services.alfresco-infrastructure.enabled
+    repository: https://kubernetes-charts.alfresco.com/incubator

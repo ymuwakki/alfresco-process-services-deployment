@@ -1,0 +1,65 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "aps.fullname" . }}-aps
+  labels:
+    app: {{ template "aps.fullname" . }}-aps
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config-aps.yaml") . | sha256sum }}
+      labels:
+        app: {{ template "aps.fullname" . }}-aps
+        release: {{ .Release.Name }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.registryPullSecrets }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.processEngine.image.repository }}:{{ .Values.processEngine.image.tag }}"
+          imagePullPolicy: {{ .Values.processEngine.image.pullPolicy }}
+          env:
+            - name: ACTIVITI_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-postgresql-aps
+                  key: postgres-password
+            - name: ACTIVITI_DATASOURCE_USERNAME
+              value: "{{ .Values.postgresql.postgresUser }}"
+            - name: ACTIVITI_DATASOURCE_URL
+              value: "jdbc:postgresql://{{ .Release.Name }}-postgresql-aps/postgres?characterEncoding=UTF-8"
+          envFrom:
+            - configMapRef:
+                # config map to use, defined in config-repository.yaml
+                name: {{ template "aps.fullname" . }}-aps-configmap
+          ports:
+            - containerPort: {{ .Values.processEngine.image.internalPort }}
+          volumeMounts:
+          - name: data
+            mountPath: {{ .Values.persistence.mountPath }}
+            subPath: {{ .Values.persistence.subPath }}
+          {{- if ne .Values.license.secretName "none" }}
+          - name: license
+            mountPath: "/root/.activiti/enterprise-license/"
+            readOnly: true
+          {{- end}}
+          resources:
+{{ toYaml .Values.processEngine.resources | indent 12 }}
+    {{- if .Values.processEngine.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.processEngine.nodeSelector | indent 8 }}
+    {{- end }}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistence.existingClaim }}
+      {{- if ne .Values.license.secretName "none" }}
+      - name: license
+        secret:
+          secretName: {{ .Values.license.secretName }}
+      {{- end}}

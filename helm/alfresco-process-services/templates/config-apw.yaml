@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # the name of the config map
+  name: {{ template "aps.fullname" . }}-apw-configmap
+  labels:
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    component: apw
+data:
+  # The JAVA_OPTS defined in the values.yaml file for the "repository" are set here using proper quotes
+  {{- if .Values.processWorkspace.environment }}
+  {{- range $key, $val := .Values.processWorkspace.environment }}
+  {{ $key }}: {{ tpl $val $ | quote }}
+  {{- end }}
+  {{- end }}

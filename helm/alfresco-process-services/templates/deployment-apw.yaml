@@ -1,0 +1,38 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "aps.fullname" . }}-apw
+  labels:
+    app: {{ template "aps.fullname" . }}-apw
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: apw
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config-apw.yaml") . | sha256sum }}
+      labels:
+        app: {{ template "aps.fullname" . }}-apw
+        release: {{ .Release.Name }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.registryPullSecrets }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.processWorkspace.image.repository }}:{{ .Values.processWorkspace.image.tag }}"
+          imagePullPolicy: {{ .Values.processWorkspace.image.pullPolicy }}
+          envFrom:
+          - configMapRef:
+              # config map to use, defined in config-apw.yaml
+              name: {{ template "aps.fullname" . }}-apw-configmap
+          ports:
+            - containerPort: {{ .Values.processWorkspace.image.internalPort }}
+          resources:
+{{ toYaml .Values.processWorkspace.resources | indent 12 }}
+    {{- if .Values.processWorkspace.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.processWorkspace.nodeSelector | indent 8 }}
+    {{- end }}

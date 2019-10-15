@@ -1,0 +1,16 @@
+
+{{ if .Values.dnsaddress }}
+
+You can access Alfresco Process Services using this address:
+
+  Alfresco Process Services Activiti App: {{ .Values.dnsaddress }}/activiti-app
+
+  Alfresco Process Services Admin App: {{ .Values.dnsaddress }}/activiti-admin
+
+{{ else }}
+
+If you have a specific DNS address for the cluster please run the following commands to get the application paths:
+
+helm upgrade --reuse-values {{ .Release.Name }} --set dnsaddress="Your DNS address ex: http://myenv.com" alfresco-incubator/alfresco-process-services
+
+{{ end }}
